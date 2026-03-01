@@ -1,0 +1,182 @@
+openapi: 3.0.1
+info:
+  title: Entry Rule Classifier API
+  version: "1.0.0"
+  description: >
+    API for managing classification rules and analyzing entries.
+servers:
+  - url: /
+paths:
+  /rules:
+    get:
+      summary: Retrieve all rules
+      tags:
+        - Rules
+      responses:
+        '200':
+          description: A list of rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleResponseDTO'
+    post:
+      summary: Register or update a rule
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRuleDTO'
+      responses:
+        '201':
+          description: Rule created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponseDTO'
+  /rules/{id}:
+    get:
+      summary: Retrieve a rule by its ID
+      tags:
+        - Rules
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Numeric ID of the rule to get
+      responses:
+        '200':
+          description: Rule object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponseDTO'
+  /cleanup:
+    post:
+      summary: Classify all non‑classified entries matching the rule without saving
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRuleDTO'
+      responses:
+        '200':
+          description: IDs of the entries that were classified
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IdClassifiedEntryResponseDTO'
+  /analyze:
+    post:
+      summary: Analyze a single entry based on existing rules
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyseEntryDTO'
+      responses:
+        '200':
+          description: Classified entry result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassifiedEntryResponseDTO'
+components:
+  schemas:
+    RegisterRuleDTO:
+      type: object
+      properties:
+        agency:
+          type: string
+          description: Numeric string with exactly 4 characters
+          example: "1234"
+        account:
+          type: string
+          description: Numeric string, 1–10 characters
+          example: "567890"
+        entry_name_pattern:
+          type: string
+          description: Pattern to match entry names (max 20 chars)
+          example: "PAYMENT*"
+        category:
+          type: string
+          description: Category assigned to matching entries (max 50 chars)
+          example: "utilities"
+      required:
+        - agency
+        - account
+        - entry_name_pattern
+        - category
+    AnalyseEntryDTO:
+      type: object
+      properties:
+        id_entry:
+          type: integer
+          description: Identifier of the entry to analyze
+          example: 42
+        agency:
+          type: string
+          description: Numeric string with exactly 4 characters
+          example: "1234"
+        account:
+          type: string
+          description: Numeric string, 1–10 characters
+          example: "567890"
+        entry_name:
+          type: string
+          description: Name of the entry (max 20 chars)
+          example: "PAYMENT ABC"
+      required:
+        - id_entry
+        - agency
+        - account
+        - entry_name
+    ParamsIdDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Rule ID
+      required:
+        - id
+    RuleResponseDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+        agency:
+          type: string
+        account:
+          type: string
+        entry_name_pattern:
+          type: string
+        category:
+          type: string
+    IdClassifiedEntryResponseDTO:
+      type: object
+      properties:
+        id_entry:
+          type: integer
+          description: Identifier of the entry that was classified
+    ClassifiedEntryResponseDTO:
+      type: object
+      properties:
+        id_entry:
+          type: integer
+        category:
+          type: string
+          description: Category assigned to the entry
