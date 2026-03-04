@@ -59,6 +59,30 @@ class RuleController {
         }
     }
 
+    async updateCategoryName(request, response) {
+        try {
+            if (request.headers['x-internal-service']) console.log(`[Inbound] - from ${request.headers['x-internal-service']} - Received request for update category name - ${new Date().toISOString()}`);
+
+            const updatedRule = await this.ruleService.updateCategoryName(request.validatedBodyDTOProperties);
+
+            return response.status(200).json(updatedRule);
+            
+        } catch (error) {
+            return response.status(error.statusCode || 500).json({message: error.message});
+        }
+    }
+
+    async delete(request, response) {
+        try {
+            if (request.headers['x-internal-service']) console.log(`[Inbound] - from ${request.headers['x-internal-service']} - Received request to delete rule: ${request.validatedParamId} - ${new Date().toISOString()}`);
+            
+            await this.ruleService.delete(request.validatedParamId);
+            return response.status(204).send();
+        } catch (error) {
+            return response.status(error.statusCode || 500).json({message: error.message});
+        }
+    }
+
 }
 
 export default RuleController;

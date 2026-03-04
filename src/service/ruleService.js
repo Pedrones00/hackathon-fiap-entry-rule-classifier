@@ -9,18 +9,45 @@ class RuleService {
         this.ruleModel = ruleModel;
     }
 
-    async #getNotClassifiedEntrys(agency, account, entry_name) {
+    async #verififyCategoryExistsBudget(agency, account, category) {
+
+        const params = new URLSearchParams({
+            agency,
+            account,
+            category
+        });
+
+        const url = `${process.env.BUDGET_SERVICE_URL}${process.env.BUDGET_SERVICE_VERIFY_ENDPOINT}?${params}`;
+
+        console.log(`[Outbound] Verify if category exists in budget service - ${new Date().toISOString()}`);
+
+        const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Service': 'rule-classifier-service'
+        },
+        signal: AbortSignal.timeout(3000)
+        });
+
+        const response_body = await response.json();
+
+        if (!response_body.length) ThrowError.throwError(404, "Budget category does not exists");
+        
+    }
+
+    async #getEntrys(agency, account, entry_name, category) {
 
         const params = new URLSearchParams({
             agency,
             account,
             entry_name,
-            category: false
+            category
         });
 
         const url = `${process.env.ACCOUNT_ENTRIES_SERVICE_URL}${process.env.ACCOUNT_ENTRIES_ENDPOINT}?${params}`;
 
-        console.log(`[Outbound] Get non-classified entries for the given parameters in the account entry service - ${new Date().toISOString()}`);
+        console.log(`[Outbound] Get entries for the given parameters in the account entry service - ${new Date().toISOString()}`);
 
         const response = await fetch(url, {
             method: 'GET',
@@ -58,6 +85,35 @@ class RuleService {
         return await response.json();
     }
 
+    async #reclassifyEntrys(agency, account, oldCategory, newCategory) {
+
+        const params = new URLSearchParams({
+            agency: agency,
+            account: account
+        });
+
+        const url = `${process.env.ACCOUNT_ENTRIES_SERVICE_URL}${process.env.ACCOUNT_ENTRIES_ENDPOINT}?${params}`;
+
+        console.log(`[Outbound] Get entries for the given parameters in the account entry service - ${new Date().toISOString()}`);
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Service': 'rule-classifier-service'
+            },
+            signal: AbortSignal.timeout(3000)
+        });
+
+        if (!response.ok) ThrowError.throwError(response.status, await response.json());
+
+        const entries = await response.json();
+
+        entries.forEach(async entry => {
+            if (entry.category === oldCategory ) await this.#classifyEntry(entry.id, newCategory);
+        });
+    }
+
     async getAll() {
         const rules = await this.ruleModel.findAll();
         return rules.map(rule => new RuleResponseDTO(rule));
@@ -87,6 +143,8 @@ class RuleService {
             return new RuleResponseDTO(await oldRule.reload());
         }
 
+        await this.#verififyCategoryExistsBudget(agency, account, category);
+
         const rule = await this.ruleModel.create(
             {
                 agency: agency,
@@ -103,7 +161,9 @@ class RuleService {
     async cleanup(data) {
         const {agency, account, entryNamePattern, category} = data;
 
-        const entries = await this.#getNotClassifiedEntrys(agency, account, entryNamePattern);
+        await this.#verififyCategoryExistsBudget(agency, account, category);
+
+        const entries = await this.#getEntrys(agency, account, entryNamePattern, false);
 
         if (!entries || entries.length === 0)  ThrowError.throwError(400, 'Nothing to classify');
 
@@ -134,6 +194,37 @@ class RuleService {
         const classifiedEntry = await this.#classifyEntry(idEntry, rule.category);
 
         return new ClassifiedEntryResponseDTO(classifiedEntry);
+    }
+
+    async delete(id) {
+        const rule = await this.ruleModel.findByPk(id);
+
+        if (!rule) ThrowError.throwError(404, 'Rule does not exist');
+
+        await rule.destroy();
+
+        return;
+    }
+
+    async updateCategoryName(data) {
+        const { agency, account, newCategory, oldCategory } = data;
+
+        const rules = await this.ruleModel.findAll({
+            where: {
+                agency: agency,
+                account: account,
+                category: oldCategory
+            }
+        });
+
+        if (!rules || rules.length === 0) ThrowError.throwError(200, 'Nothing to update');
+
+        for (const rule of rules) {
+            await rule.update({ category: newCategory });
+        }
+
+        await this.#reclassifyEntrys(agency, account, oldCategory, newCategory)
+
     }
 
 }
