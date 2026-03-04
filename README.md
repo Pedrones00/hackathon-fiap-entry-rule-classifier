@@ -32,7 +32,7 @@ Build the container image with:
 podman build -t entry-rule-classifier .
 ```
 
-Start a temporary container binding port 3001:
+Start a temporary container binding port 3002:
 ```bash
 podman run --rm --init -p 3002:3002 --name service-rule-classifier entry-rule-classifier:latest
 ```
@@ -46,6 +46,12 @@ The OpenAPI spec is available in `src/docs/openapi.yaml`. Visit `/docs` when the
 - `DATABASE_PATH` — path to the SQLite file (default: `./storage/database.sqlite`).
 - `DB_LOGGING` — `true` to enable Sequelize logging, `false` by default.
 - `NODE_PORT` — server port (default: `3002`).
+
+Additional environment variables used to integrate with external services:
+- `BUDGET_SERVICE_URL` — base URL for the budget service used to verify categories (example: `http://budget-service:3000`).
+- `BUDGET_SERVICE_VERIFY_ENDPOINT` — path (or path+query) to the endpoint that verifies if a budget category exists (example: `/budget/categories/verify`).
+- `ACCOUNT_ENTRIES_SERVICE_URL` — base URL for the account-entries service used to fetch and update entries (example: `http://account-entries-service:3001`).
+- `ACCOUNT_ENTRIES_ENDPOINT` — path to the entries resource used by this service (example: `/entries`).
 
 ## Database Schema
 

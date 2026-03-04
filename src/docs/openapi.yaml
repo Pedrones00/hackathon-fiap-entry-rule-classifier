@@ -5,7 +5,7 @@ info:
   description: >
     API for managing classification rules and analyzing entries.
 servers:
-  - url: /
+  - url: http://localhost:3002
 paths:
   /rules:
     get:
@@ -38,6 +38,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuleResponseDTO'
+    patch:
+      summary: Update category name for matching rules
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryNameDTO'
+      responses:
+        '200':
+          description: Updated rule(s) returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponseDTO'
   /rules/{id}:
     get:
       summary: Retrieve a rule by its ID
@@ -57,6 +74,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuleResponseDTO'
+    delete:
+      summary: Delete a rule by its ID
+      tags:
+        - Rules
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Numeric ID of the rule to delete
+      responses:
+        '204':
+          description: Rule deleted successfully (no content)
   /cleanup:
     post:
       summary: Classify all non‑classified entries matching the rule without saving
@@ -153,6 +184,30 @@ components:
           description: Rule ID
       required:
         - id
+    UpdateCategoryNameDTO:
+      type: object
+      properties:
+        agency:
+          type: string
+          description: Numeric string with exactly 4 characters
+          example: "1234"
+        account:
+          type: string
+          description: Numeric string, 1–10 characters
+          example: "567890"
+        new_category_name:
+          type: string
+          description: New category name (max 50 chars)
+          example: "utilities"
+        old_category_name:
+          type: string
+          description: Old category name to be replaced
+          example: "bills"
+      required:
+        - agency
+        - account
+        - new_category_name
+        - old_category_name
     RuleResponseDTO:
       type: object
       properties:
