@@ -21,22 +21,19 @@ class RuleService {
 
         console.log(`[Outbound] Verify if category exists in budget service - ${new Date().toISOString()}`);
 
-        try {
-            const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Internal-Service': 'rule-classifier-service'
-            },
-            signal: AbortSignal.timeout(3000)
-            });
+        
+        const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Service': 'rule-classifier-service'
+        },
+        signal: AbortSignal.timeout(3000)
+        });
 
-            const response_body = await response.json();
+        const response_body = await response.json();
 
-            if (!response_body.length) ThrowError.throwError(404, "Budget category does not exists");
-        } catch (error) {
-            console.warn(`[Warning] Budget service unavailable - category verification skipped: ${error.message} - ${new Date().toISOString()}`);
-        }
+        if (response_body.length === 0) ThrowError.throwError(404, "Budget category does not exists");
     }
 
     async #getEntrys(agency, account, entry_name, category) {
